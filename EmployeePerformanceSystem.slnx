@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="EmployeePerformance.API/EmployeePerformance.API.csproj" />
+  <Project Path="EmployeePerformance.Application/EmployeePerformance.Application.csproj" />
+  <Project Path="EmployeePerformance.Domain/EmployeePerformance.Domain.csproj" />
+  <Project Path="EmployeePerformance.Infrastructure/EmployeePerformance.Infrastructure.csproj" />
+  <Project Path="EmployeePerformance.Tests/EmployeePerformance.Tests.csproj" />
+</Solution>
