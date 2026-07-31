@@ -12,8 +12,40 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+try
+{
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    var logsDirectory = Path.Combine(builder.Environment.ContentRootPath, "Logs");
+
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("System", LogEventLevel.Warning)
+        .WriteTo.Console()
+        .WriteTo.Async(asyncSink => asyncSink.File(
+            path: Path.Combine(logsDirectory, "log-.txt"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,
+            shared: true,
+            flushToDiskInterval: TimeSpan.FromSeconds(1)));
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -116,6 +148,15 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+app.Lifetime.ApplicationStarted.Register(() =>
+    Log.Information("Application started"));
+
+app.Lifetime.ApplicationStopping.Register(() =>
+    Log.Information("Application stopping"));
+
+app.Lifetime.ApplicationStopped.Register(() =>
+    Log.Information("Application stopped"));
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -124,6 +165,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
+        diagnosticContext.Set("RequestPath", httpContext.Request.Path);
+    };
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -146,6 +196,16 @@ app.MapGet("/weatherforecast", () =>
 .WithOpenApi();
 
 app.Run();
+}
+catch (Exception exception)
+{
+    Log.Fatal(exception, "Application terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {

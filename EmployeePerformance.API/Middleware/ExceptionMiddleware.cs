@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using EmployeePerformance.API.Models;
 using EmployeePerformance.Application.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace EmployeePerformance.API.Middleware
 {
@@ -10,10 +11,12 @@ namespace EmployeePerformance.API.Middleware
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
         private readonly RequestDelegate _next;
+        private readonly ILogger<ExceptionMiddleware> _logger;
 
-        public ExceptionMiddleware(RequestDelegate next)
+        public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
         {
             _next = next;
+            _logger = logger;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -25,6 +28,11 @@ namespace EmployeePerformance.API.Middleware
             catch (Exception exception)
             {
                 var (statusCode, message) = MapException(exception);
+                _logger.LogError(exception,
+                    "Unhandled exception while processing {Method} {Path}. TraceId: {TraceId}",
+                    context.Request.Method,
+                    context.Request.Path,
+                    context.TraceIdentifier);
                 await WriteResponseAsync(context, statusCode, message);
             }
         }
