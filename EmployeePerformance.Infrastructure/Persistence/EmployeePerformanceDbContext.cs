@@ -57,8 +57,6 @@ public partial class EmployeePerformanceDbContext : DbContext
             entity.Property(e => e.FirstName).HasMaxLength(100);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LastName).HasMaxLength(100);
-            entity.Property(e => e.PasswordHash).HasMaxLength(512);
-
             entity.HasOne(d => d.Manager).WithMany(p => p.InverseManager)
                 .HasForeignKey(d => d.ManagerId)
                 .HasConstraintName("FK_Employees_Manager");

@@ -15,8 +15,6 @@ public partial class Employee
 
     public string Email { get; set; } = null!;
 
-    public string PasswordHash { get; set; } = null!;
-
     public string? Department { get; set; }
 
     public string? Designation { get; set; }
