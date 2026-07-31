@@ -1,11 +1,6 @@
-﻿using EmployeePerformance.Application.DTOs.Rating;
+using EmployeePerformance.Application.DTOs.Rating;
 using EmployeePerformance.Application.Interfaces;
 using EmployeePerformance.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EmployeePerformance.Application.Services
 {
@@ -32,9 +27,8 @@ namespace EmployeePerformance.Application.Services
                 return null;
 
             return MapToDto(rating);
-        }   
+        }
 
-        // Add Rating
         public async Task<RatingDto> AddAsync(CreateRatingDto dto)
         {
             var rating = MapToEntity(dto);
@@ -44,27 +38,23 @@ namespace EmployeePerformance.Application.Services
             return MapToDto(rating);
         }
 
-        // Update Rating
         public async Task UpdateAsync(int id, UpdateRatingDto dto)
         {
             var rating = await _ratingRepository.GetByIdAsync(id);
 
             if (rating == null)
-                throw new Exception("Rating not found.");
+                throw new KeyNotFoundException("Rating not found.");
 
             UpdateEntity(rating, dto);
 
             await _ratingRepository.UpdateAsync(rating);
         }
 
-        // Delete Rating
         public async Task<bool> DeleteAsync(int id)
         {
             return await _ratingRepository.DeleteAsync(id);
         }
 
-
-        // Entity -> DTO
         private RatingDto MapToDto(Rating rating)
         {
             return new RatingDto
@@ -78,7 +68,6 @@ namespace EmployeePerformance.Application.Services
             };
         }
 
-        // Create DTO -> Entity
         private Rating MapToEntity(CreateRatingDto dto)
         {
             return new Rating
@@ -91,7 +80,6 @@ namespace EmployeePerformance.Application.Services
             };
         }
 
-        // Update DTO -> Existing Entity
         private void UpdateEntity(Rating rating, UpdateRatingDto dto)
         {
             rating.PerformanceReviewId = dto.performanceReviewId;

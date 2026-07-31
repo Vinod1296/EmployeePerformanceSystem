@@ -52,19 +52,8 @@ namespace EmployeePerformance.API.Controllers
         [ProducesResponseType(typeof(string), StatusCodes.Status409Conflict)]
         public async Task<ActionResult<RegisterResponseDto>> Register([FromBody] RegisterRequestDto request)
         {
-            try
-            {
-                var response = await _authService.RegisterAsync(request);
-                return Created(string.Empty, response);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(ex.Message);
-            }
+            var response = await _authService.RegisterAsync(request);
+            return Created(string.Empty, response);
         }
 
         /// <summary>

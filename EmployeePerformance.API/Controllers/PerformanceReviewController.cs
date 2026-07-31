@@ -2,7 +2,6 @@ using EmployeePerformance.Application.DTOs.Common;
 using EmployeePerformance.Application.DTOs.PerformanceReview;
 using EmployeePerformance.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -65,16 +64,9 @@ namespace EmployeePerformance.API.Controllers
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Update(int id, UpdatePerformanceReviewDto dto)
         {
-            try
-            {
-                await _performanceReviewService.UpdateAsync(id, dto);
+            await _performanceReviewService.UpdateAsync(id, dto);
 
-                return Ok("Performance Review Updated Successfully.");
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
+            return Ok("Performance Review Updated Successfully.");
         }
 
         [HttpDelete("{id}")]

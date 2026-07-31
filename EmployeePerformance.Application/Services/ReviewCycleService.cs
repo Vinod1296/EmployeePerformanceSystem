@@ -1,11 +1,6 @@
-﻿using EmployeePerformance.Application.DTOs.ReviewCycle;
+using EmployeePerformance.Application.DTOs.ReviewCycle;
 using EmployeePerformance.Application.Interfaces;
 using EmployeePerformance.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EmployeePerformance.Application.Services
 {
@@ -46,6 +41,7 @@ namespace EmployeePerformance.Application.Services
                 CreatedByEmployeeId = reviewCycle.CreatedByEmployeeId
             };
         }
+
         public async Task<ReviewCycleDto> AddReviewCycleAsync(CreateReviewCycleDto createReviewCycleDto)
         {
             var reviewCycle = new ReviewCycle
@@ -74,20 +70,18 @@ namespace EmployeePerformance.Application.Services
         public async Task UpdateReviewCycleAsync(int id, UpdateReviewCycleDto updateReviewCycleDto)
         {
             var reviewCycle = await _reviewCycleRepository.GetByIdAsync(id);
-            if (reviewCycle == null) throw new Exception("Review cycle not found");
+            if (reviewCycle == null) throw new KeyNotFoundException("Review cycle not found");
             reviewCycle.CycleName = updateReviewCycleDto.CycleName;
             reviewCycle.StartDate = updateReviewCycleDto.StartDate;
             reviewCycle.EndDate = updateReviewCycleDto.EndDate;
             reviewCycle.Status = updateReviewCycleDto.Status;
-           
+
             await _reviewCycleRepository.UpdateAsync(reviewCycle);
         }
-
 
         public async Task<bool> DeleteAsync(int id)
         {
             return await _reviewCycleRepository.DeleteAsync(id);
         }
-
     }
 }
