@@ -38,7 +38,7 @@ namespace EmployeePerformance.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create(CreateReviewCycleDto createReviewCycleDto)
         {
             var createdReviewCycle = await _reviewCycleService.AddReviewCycleAsync(createReviewCycleDto);
@@ -50,7 +50,7 @@ namespace EmployeePerformance.API.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Update(int id, UpdateReviewCycleDto updateReviewCycleDto)
         {
             await _reviewCycleService.UpdateReviewCycleAsync(id, updateReviewCycleDto);
@@ -62,7 +62,7 @@ namespace EmployeePerformance.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Delete(int id)
         {
             var result = await _reviewCycleService.DeleteAsync(id);

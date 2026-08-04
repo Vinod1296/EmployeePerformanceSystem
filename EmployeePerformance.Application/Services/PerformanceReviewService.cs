@@ -37,6 +37,11 @@ namespace EmployeePerformance.Application.Services
 
         public async Task<PerformanceReviewDto> AddAsync(CreatePerformanceReviewDto dto)
         {
+            if (await _performanceReviewRepository.ExistsByEmployeeAndCycleAsync(dto.EmployeeId, dto.ReviewCycleId))
+            {
+                throw new InvalidOperationException("A performance review already exists for this employee in this review cycle.");
+            }
+
             var performanceReview = MapToEntity(dto);
 
             await _performanceReviewRepository.AddAsync(performanceReview);
@@ -54,6 +59,104 @@ namespace EmployeePerformance.Application.Services
             UpdateEntity(performanceReview, dto);
 
             await _performanceReviewRepository.UpdateAsync(performanceReview);
+        }
+
+        public async Task SubmitSelfAssessmentAsync(int reviewId, SubmitSelfAssessmentDto dto, CurrentUserContextDto currentUser)
+        {
+            if (!IsEmployee(currentUser))
+            {
+                throw new UnauthorizedAccessException("You are not authorized to update this review.");
+            }
+
+            var employeeId = currentUser.EmployeeId;
+            var performanceReview = await _performanceReviewRepository.GetPerformanceReviewByIdAsync(reviewId);
+
+            if (performanceReview == null)
+            {
+                throw new KeyNotFoundException("Performance Review not found.");
+            }
+
+            if (performanceReview.EmployeeId != employeeId)
+            {
+                throw new UnauthorizedAccessException("You are not authorized to update this review.");
+            }
+
+            if (IsReviewCycleClosed(performanceReview.ReviewCycle))
+            {
+                throw new ArgumentException("The review cycle is no longer accepting self assessments.");
+            }
+
+            if (!IsSelfAssessmentAllowed(performanceReview.Status))
+            {
+                throw new ArgumentException("Cannot submit self-assessment in the current status.");
+            }
+
+            ValidateSelfAssessment(dto);
+
+            performanceReview.SelfAssessment = dto.SelfAssessment!.Trim();
+            performanceReview.SubmittedDate = DateTime.UtcNow;
+            performanceReview.Status = "Submitted";
+            performanceReview.ModifiedAt = DateTime.UtcNow;
+
+            await _performanceReviewRepository.SubmitSelfAssessmentAsync(performanceReview);
+        }
+
+        public async Task ManagerReviewAsync(int reviewId, ManagerReviewDto dto, CurrentUserContextDto currentUser)
+        {
+            if (!IsManager(currentUser))
+            {
+                throw new UnauthorizedAccessException("You are not authorized to review this performance review.");
+            }
+
+            if (dto == null)
+            {
+                throw new ArgumentException("Manager review request is required.");
+            }
+
+            if (!string.Equals(dto.Action, "Approve", StringComparison.Ordinal) &&
+                !string.Equals(dto.Action, "NeedsRevision", StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Invalid action value. Allowed: Approve, NeedsRevision.");
+            }
+
+            var performanceReview = await _performanceReviewRepository.GetPerformanceReviewByIdAsync(reviewId);
+
+            if (performanceReview == null)
+            {
+                throw new KeyNotFoundException("Performance Review not found.");
+            }
+
+            if (performanceReview.ManagerId != currentUser.EmployeeId)
+            {
+                throw new UnauthorizedAccessException("You are not authorized to review this performance review.");
+            }
+
+            if (!IsManagerReviewAllowed(performanceReview.Status))
+            {
+                throw new ArgumentException("Performance review cannot be reviewed in the current status.");
+            }
+
+            if (string.Equals(dto.Action, "Approve", StringComparison.Ordinal))
+            {
+                ValidateManagerComments(dto.ManagerComments);
+                ValidateOverallRating(dto.OverallRating);
+
+                performanceReview.ManagerComments = dto.ManagerComments!.Trim();
+                performanceReview.OverallRating = dto.OverallRating;
+                performanceReview.Status = "Approved";
+                performanceReview.ApprovedDate = DateTime.UtcNow;
+                performanceReview.ModifiedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                ValidateManagerComments(dto.ManagerComments);
+
+                performanceReview.ManagerComments = dto.ManagerComments!.Trim();
+                performanceReview.Status = "NeedsRevision";
+                performanceReview.ModifiedAt = DateTime.UtcNow;
+            }
+
+            await _performanceReviewRepository.UpdateManagerReviewAsync(performanceReview);
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -87,11 +190,14 @@ namespace EmployeePerformance.Application.Services
                 ReviewCycleId = dto.ReviewCycleId,
                 EmployeeId = dto.EmployeeId,
                 ManagerId = dto.ManagerId,
-                SelfAssessment = dto.SelfAssessment,
-                ManagerComments = dto.ManagerComments,
-                OverallRating = dto.OverallRating,
                 Status = "Draft",
-                CreatedAt = DateTime.UtcNow
+                SelfAssessment = null,
+                ManagerComments = null,
+                OverallRating = null,
+                SubmittedDate = null,
+                ApprovedDate = null,
+                CreatedAt = DateTime.UtcNow,
+                ModifiedAt = null
             };
         }
 
@@ -104,9 +210,83 @@ namespace EmployeePerformance.Application.Services
             performanceReview.ModifiedAt = DateTime.UtcNow;
         }
 
+        private static void ValidateSelfAssessment(SubmitSelfAssessmentDto dto)
+        {
+            if (dto == null)
+            {
+                throw new ArgumentException("Self assessment is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.SelfAssessment))
+            {
+                throw new ArgumentException("Self assessment is required.");
+            }
+
+            if (dto.SelfAssessment.Length > 2000)
+            {
+                throw new ArgumentException("Self assessment must not exceed 2000 characters.");
+            }
+        }
+
+        private static void ValidateManagerComments(string? managerComments)
+        {
+            if (string.IsNullOrWhiteSpace(managerComments))
+            {
+                throw new ArgumentException("Manager comments are required.");
+            }
+
+            if (managerComments.Length > 2000)
+            {
+                throw new ArgumentException("Manager comments must not exceed 2000 characters.");
+            }
+        }
+
+        private static void ValidateOverallRating(decimal? overallRating)
+        {
+            if (!overallRating.HasValue)
+            {
+                throw new ArgumentException("Overall rating is required for approval.");
+            }
+
+            if (overallRating < 1.0m || overallRating > 5.0m)
+            {
+                throw new ArgumentException("Overall rating must be between 1.0 and 5.0.");
+            }
+        }
+
+        private static bool IsSelfAssessmentAllowed(string? status)
+        {
+            return string.Equals(status, "Draft", StringComparison.Ordinal)
+                || string.Equals(status, "NeedsRevision", StringComparison.Ordinal);
+        }
+
+        private static bool IsManagerReviewAllowed(string? status)
+        {
+            return string.Equals(status, "Submitted", StringComparison.Ordinal)
+                || string.Equals(status, "NeedsRevision", StringComparison.Ordinal);
+        }
+
+        private static bool IsReviewCycleClosed(ReviewCycle reviewCycle)
+        {
+            var status = reviewCycle?.Status?.Trim();
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return true;
+            }
+
+            return status.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool IsEmployee(CurrentUserContextDto currentUser)
         {
             return string.Equals(currentUser.Role, "Employee", StringComparison.Ordinal);
+        }
+
+        private static bool IsManager(CurrentUserContextDto currentUser)
+        {
+            return string.Equals(currentUser.Role, "Manager", StringComparison.Ordinal);
         }
     }
 }

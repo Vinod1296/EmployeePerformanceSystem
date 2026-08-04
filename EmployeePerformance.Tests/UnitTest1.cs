@@ -487,4 +487,272 @@ public class PerformanceReviewServiceTests
         repository.Verify(x => x.GetByIdForEmployeeAsync(5, 7), Times.Once);
         repository.Verify(x => x.GetByIdAsync(It.IsAny<int>()), Times.Never);
     }
+
+    [Fact]
+    public async Task SubmitSelfAssessmentAsync_UpdatesOnlyEmployeeOwnedDraftReview()
+    {
+        var review = new PerformanceReview
+        {
+            PerformanceReviewId = 15,
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2,
+            SelfAssessment = null,
+            ManagerComments = "Keep",
+            OverallRating = 4.5m,
+            Status = "Draft",
+            ApprovedDate = null,
+            CreatedAt = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+            ModifiedAt = null,
+            ReviewCycle = new ReviewCycle
+            {
+                ReviewCycleId = 3,
+                Status = "Active"
+            }
+        };
+
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync(review);
+        repository.Setup(x => x.SubmitSelfAssessmentAsync(review)).Returns(Task.CompletedTask);
+
+        var service = new PerformanceReviewService(repository.Object);
+        var nowBefore = DateTime.UtcNow;
+
+        await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
+        {
+            SelfAssessment = "I completed all assigned work and met project deadlines."
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 7,
+            Role = "Employee"
+        });
+
+        review.SelfAssessment.Should().Be("I completed all assigned work and met project deadlines.");
+        review.Status.Should().Be("Submitted");
+        review.SubmittedDate.Should().NotBeNull();
+        review.SubmittedDate.Should().BeOnOrAfter(nowBefore);
+        review.ModifiedAt.Should().NotBeNull();
+        review.ManagerComments.Should().Be("Keep");
+        review.OverallRating.Should().Be(4.5m);
+        review.ApprovedDate.Should().BeNull();
+        repository.Verify(x => x.SubmitSelfAssessmentAsync(review), Times.Once);
+    }
+
+    [Fact]
+    public async Task SubmitSelfAssessmentAsync_Throws_WhenReviewDoesNotExist()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync((PerformanceReview?)null);
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
+        {
+            SelfAssessment = "Complete"
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 7,
+            Role = "Employee"
+        });
+
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Performance Review not found.");
+    }
+
+    [Fact]
+    public async Task SubmitSelfAssessmentAsync_Throws_WhenEmployeeDoesNotOwnReview()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync(new PerformanceReview
+        {
+            PerformanceReviewId = 15,
+            ReviewCycleId = 3,
+            EmployeeId = 9,
+            ManagerId = 2,
+            Status = "Draft",
+            ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
+        });
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
+        {
+            SelfAssessment = "Complete"
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 7,
+            Role = "Employee"
+        });
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("You are not authorized to update this review.");
+    }
+
+    [Fact]
+    public async Task SubmitSelfAssessmentAsync_Throws_WhenCycleIsClosed()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync(new PerformanceReview
+        {
+            PerformanceReviewId = 15,
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2,
+            Status = "Draft",
+            ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Closed" }
+        });
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
+        {
+            SelfAssessment = "Complete"
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 7,
+            Role = "Employee"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("The review cycle is no longer accepting self assessments.");
+    }
+
+    [Fact]
+    public async Task SubmitSelfAssessmentAsync_Throws_WhenAlreadySubmitted()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync(new PerformanceReview
+        {
+            PerformanceReviewId = 15,
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2,
+            SelfAssessment = "Existing",
+            Status = "Submitted",
+            ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
+        });
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
+        {
+            SelfAssessment = "Complete"
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 7,
+            Role = "Employee"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Cannot submit self-assessment in the current status.");
+    }
+
+    [Fact]
+    public async Task SubmitSelfAssessmentAsync_Throws_WhenAssessmentMissing()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync(new PerformanceReview
+        {
+            PerformanceReviewId = 15,
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2,
+            Status = "Draft",
+            ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
+        });
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
+        {
+            SelfAssessment = "   "
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 7,
+            Role = "Employee"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Self assessment is required.");
+    }
+
+    [Fact]
+    public async Task AddAsync_Throws_WhenDuplicatePerformanceReviewExists()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.ExistsByEmployeeAndCycleAsync(7, 3)).ReturnsAsync(true);
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.AddAsync(new CreatePerformanceReviewDto
+        {
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("A performance review already exists for this employee in this review cycle.");
+        repository.Verify(x => x.AddAsync(It.IsAny<PerformanceReview>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ManagerReviewAsync_Approves_SubmittedReview()
+    {
+        var review = new PerformanceReview
+        {
+            PerformanceReviewId = 21,
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2,
+            Status = "Submitted",
+            SelfAssessment = "Great progress",
+            ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
+        };
+
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(21)).ReturnsAsync(review);
+        repository.Setup(x => x.UpdateManagerReviewAsync(review)).Returns(Task.CompletedTask);
+
+        var service = new PerformanceReviewService(repository.Object);
+
+        await service.ManagerReviewAsync(21, new ManagerReviewDto
+        {
+            Action = "Approve",
+            ManagerComments = "Excellent ownership and delivery.",
+            OverallRating = 4.5m
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 2,
+            Role = "Manager"
+        });
+
+        review.ManagerComments.Should().Be("Excellent ownership and delivery.");
+        review.OverallRating.Should().Be(4.5m);
+        review.Status.Should().Be("Approved");
+        review.ApprovedDate.Should().NotBeNull();
+        review.ModifiedAt.Should().NotBeNull();
+        repository.Verify(x => x.UpdateManagerReviewAsync(review), Times.Once);
+    }
+
+    [Fact]
+    public async Task ManagerReviewAsync_RejectsInvalidActionValue()
+    {
+        var repository = new Mock<IPerformanceReviewRepository>();
+        var service = new PerformanceReviewService(repository.Object);
+
+        var act = async () => await service.ManagerReviewAsync(21, new ManagerReviewDto
+        {
+            Action = "Reject",
+            ManagerComments = "No",
+            OverallRating = 4.5m
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 2,
+            Role = "Manager"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Invalid action value. Allowed: Approve, NeedsRevision.");
+    }
 }

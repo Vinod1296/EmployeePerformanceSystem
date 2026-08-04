@@ -40,6 +40,13 @@ namespace EmployeePerformance.Infrastructure.Repositories
             return await _context.PerformanceReviews.AsNoTracking().FirstOrDefaultAsync(performanceReview => performanceReview.PerformanceReviewId == id);
         }
 
+        public async Task<PerformanceReview?> GetPerformanceReviewByIdAsync(int id)
+        {
+            return await _context.PerformanceReviews
+                .Include(performanceReview => performanceReview.ReviewCycle)
+                .FirstOrDefaultAsync(performanceReview => performanceReview.PerformanceReviewId == id);
+        }
+
         public async Task<PerformanceReview?> GetByIdForEmployeeAsync(int id, int employeeId)
         {
             return await _context.PerformanceReviews
@@ -47,6 +54,13 @@ namespace EmployeePerformance.Infrastructure.Repositories
                 .FirstOrDefaultAsync(performanceReview =>
                     performanceReview.PerformanceReviewId == id &&
                     performanceReview.EmployeeId == employeeId);
+        }
+
+        public async Task<bool> ExistsByEmployeeAndCycleAsync(int employeeId, int reviewCycleId)
+        {
+            return await _context.PerformanceReviews.AnyAsync(performanceReview =>
+                performanceReview.EmployeeId == employeeId &&
+                performanceReview.ReviewCycleId == reviewCycleId);
         }
 
         public async Task AddAsync(PerformanceReview performanceReview)
@@ -58,6 +72,25 @@ namespace EmployeePerformance.Infrastructure.Repositories
         public async Task UpdateAsync(PerformanceReview performanceReview)
         {
             _context.PerformanceReviews.Update(performanceReview);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task SubmitSelfAssessmentAsync(PerformanceReview performanceReview)
+        {
+            _context.Entry(performanceReview).Property(x => x.SelfAssessment).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.SubmittedDate).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.Status).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.ModifiedAt).IsModified = true;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateManagerReviewAsync(PerformanceReview performanceReview)
+        {
+            _context.Entry(performanceReview).Property(x => x.ManagerComments).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.OverallRating).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.Status).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.ApprovedDate).IsModified = true;
+            _context.Entry(performanceReview).Property(x => x.ModifiedAt).IsModified = true;
             await _context.SaveChangesAsync();
         }
 

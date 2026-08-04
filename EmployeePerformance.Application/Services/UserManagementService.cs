@@ -35,6 +35,7 @@ namespace EmployeePerformance.Application.Services
 
         public async Task<UpdateUserRoleResponseDto> UpdateUserRoleAsync(int userId, string role, int authenticatedUserId)
         {
+            role = Normalize(role);
             ValidateRole(role);
 
             if (userId == authenticatedUserId)
@@ -132,6 +133,11 @@ namespace EmployeePerformance.Application.Services
             }
         }
 
+        private static string Normalize(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
         private static void ValidateQueryParameters(UserQueryParametersDto parameters)
         {
             if (parameters.PageNumber <= 0)
@@ -162,11 +168,6 @@ namespace EmployeePerformance.Application.Services
             {
                 throw new InvalidSortDirectionException();
             }
-        }
-
-        private static string Normalize(string? value)
-        {
-            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
     }
 }

@@ -69,6 +69,45 @@ namespace EmployeePerformance.API.Controllers
             return Ok("Performance Review Updated Successfully.");
         }
 
+        [HttpPut("{reviewId}/self-assessment")]
+        [Authorize(Roles = "Employee")]
+        public async Task<IActionResult> SubmitSelfAssessment(int reviewId, SubmitSelfAssessmentDto dto)
+        {
+            var currentUser = GetCurrentUserContext();
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
+            await _performanceReviewService.SubmitSelfAssessmentAsync(reviewId, dto, currentUser);
+
+            return Ok(new
+            {
+                message = "Self assessment submitted successfully.",
+                performanceReviewId = reviewId,
+                status = "Submitted"
+            });
+        }
+
+        [HttpPut("{reviewId}/manager-review")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> ManagerReview(int reviewId, ManagerReviewDto dto)
+        {
+            var currentUser = GetCurrentUserContext();
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
+            await _performanceReviewService.ManagerReviewAsync(reviewId, dto, currentUser);
+
+            return Ok(new
+            {
+                message = "Performance review updated successfully.",
+                performanceReviewId = reviewId
+            });
+        }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)

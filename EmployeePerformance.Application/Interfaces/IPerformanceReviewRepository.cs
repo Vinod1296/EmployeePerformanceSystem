@@ -15,11 +15,19 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task <PerformanceReview?> GetByIdAsync (int id);
 
+        Task<PerformanceReview?> GetPerformanceReviewByIdAsync(int id);
+
         Task<PerformanceReview?> GetByIdForEmployeeAsync(int id, int employeeId);
+
+        Task<bool> ExistsByEmployeeAndCycleAsync(int employeeId, int reviewCycleId);
 
         Task AddAsync(PerformanceReview performanceReview);
 
         Task UpdateAsync(PerformanceReview performanceReview);
+
+        Task SubmitSelfAssessmentAsync(PerformanceReview performanceReview);
+
+        Task UpdateManagerReviewAsync(PerformanceReview performanceReview);
     
         Task <bool> DeleteAsync(int id);
     }

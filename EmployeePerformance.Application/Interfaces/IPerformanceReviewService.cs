@@ -13,6 +13,10 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task UpdateAsync(int id, UpdatePerformanceReviewDto dto);
 
+        Task SubmitSelfAssessmentAsync(int reviewId, SubmitSelfAssessmentDto dto, CurrentUserContextDto currentUser);
+
+        Task ManagerReviewAsync(int reviewId, ManagerReviewDto dto, CurrentUserContextDto currentUser);
+
         Task<bool> DeleteAsync(int id);
     }
 }
