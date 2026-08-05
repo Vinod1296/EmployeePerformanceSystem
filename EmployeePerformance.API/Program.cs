@@ -84,6 +84,8 @@ builder.Services.AddDbContext<EmployeePerformanceDbContext>(options =>
 
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReviewCycleRepository, ReviewCycleRepository>();
 builder.Services.AddScoped<IReviewCycleService, ReviewCycleService>();
 builder.Services.AddScoped<IPerformanceReviewRepository, PerformanceReviewRepository>();
