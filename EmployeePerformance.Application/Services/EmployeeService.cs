@@ -5,16 +5,19 @@ using System.Text;
 using System.Threading.Tasks;
 using EmployeePerformance.Application.Interfaces;
 using EmployeePerformance.Application.DTOs.Employee;
+using EmployeePerformance.Application.Exceptions;
 using EmployeePerformance.Domain.Entities;
 namespace EmployeePerformance.Application.Services
 {
     public  class EmployeeService : IEmployeeService
     {
         private readonly IEmployeeRepository _employeeRepository;
+        private readonly IUserManagementRepository _userManagementRepository;
 
-        public EmployeeService(IEmployeeRepository employeeRepository)
+        public EmployeeService(IEmployeeRepository employeeRepository, IUserManagementRepository userManagementRepository)
         {
             _employeeRepository = employeeRepository;
+            _userManagementRepository = userManagementRepository;
         }
 
         public async Task<EmployeeDto> AddEmployeeAsync(CreateEmployeeDto employeeDto)
@@ -29,6 +32,8 @@ namespace EmployeePerformance.Application.Services
             employee.Designation = employeeDto.Designation;
             employee.ManagerId = employeeDto.ManagerId;
             employee.HireDate = employeeDto.HireDate;
+
+            await ValidateManagerAsync(employee.ManagerId, null);
 
             employee.IsActive = true;
             employee.CreatedAt = DateTime.UtcNow;
@@ -138,6 +143,7 @@ namespace EmployeePerformance.Application.Services
             {
                 return;
             }
+            await ValidateManagerAsync(employeeDto.ManagerId, id);
             employee.FirstName = employeeDto.FristName;
             employee.LastName = employeeDto.LastName;
             employee.Email = employeeDto.Email;
@@ -148,6 +154,46 @@ namespace EmployeePerformance.Application.Services
             employee.ModifiedAt = DateTime.UtcNow;
             employee.IsActive = employeeDto.IsActive;
             await _employeeRepository.UpdateAsync(employee);
+        }
+
+        private async Task ValidateManagerAsync(int? managerId, int? employeeId)
+        {
+            if (!managerId.HasValue)
+            {
+                return;
+            }
+
+            if (employeeId.HasValue && employeeId.Value == managerId.Value)
+            {
+                throw new InvalidOperationException("An employee cannot be their own manager.");
+            }
+
+            var managerEmployee = await _employeeRepository.GetByIdAsync(managerId.Value);
+            if (managerEmployee is null)
+            {
+                throw new InvalidOperationException("Selected manager not found.");
+            }
+
+            if (!managerEmployee.IsActive)
+            {
+                throw new InvalidOperationException("Selected manager is inactive.");
+            }
+
+            var managerUser = await _userManagementRepository.GetUserEntityByEmployeeIdAsync(managerId.Value);
+            if (managerUser is null)
+            {
+                throw new InvalidOperationException("Selected manager user account not found.");
+            }
+
+            if (!managerUser.IsActive)
+            {
+                throw new InvalidOperationException("Selected manager user account is inactive.");
+            }
+
+            if (!string.Equals(managerUser.Role, "Manager", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Selected employee is not a Manager.");
+            }
         }
 
 

@@ -92,6 +92,11 @@ namespace EmployeePerformance.Infrastructure.Repositories
             return await _context.Users.FirstOrDefaultAsync(user => user.UserId == userId);
         }
 
+        public async Task<User?> GetUserEntityByEmployeeIdAsync(int employeeId)
+        {
+            return await _context.Users.FirstOrDefaultAsync(user => user.EmployeeId == employeeId);
+        }
+
         public async Task UpdateRoleAsync(int userId, string role)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);

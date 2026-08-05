@@ -12,6 +12,8 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task<User?> GetUserEntityByIdAsync(int userId);
 
+        Task<User?> GetUserEntityByEmployeeIdAsync(int employeeId);
+
         Task UpdateRoleAsync(int userId, string role);
 
         Task<int> CountUsersByRoleAsync(string role);

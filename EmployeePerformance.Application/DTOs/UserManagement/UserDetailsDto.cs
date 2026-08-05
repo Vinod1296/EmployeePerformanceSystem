@@ -12,6 +12,6 @@ namespace EmployeePerformance.Application.DTOs.UserManagement
 
         public bool IsActive { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } 
     }
 }

@@ -29,6 +29,10 @@ namespace EmployeePerformance.API.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(string), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> AddEmployee(CreateEmployeeDto employeeDto)
         {
             var createdEmployee = await _employeeService.AddEmployeeAsync(employeeDto);
@@ -52,6 +56,11 @@ namespace EmployeePerformance.API.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateEmployee(int id, UpdateEmployeeDto employeeDto)
         {
             await _employeeService.UpdateEmployeeAsync(id, employeeDto);
