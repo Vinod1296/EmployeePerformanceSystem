@@ -5,7 +5,5 @@ namespace EmployeePerformance.Application.DTOs.PerformanceReview
         public string Action { get; set; } = null!;
 
         public string? ManagerComments { get; set; }
-
-        public decimal? OverallRating { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using EmployeePerformance.Application.DTOs.Rating;
+using EmployeePerformance.Application.DTOs.Common;
+using EmployeePerformance.Application.DTOs.Rating;
 
 namespace EmployeePerformance.Application.Interfaces
 {
@@ -8,10 +9,10 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task<RatingDto?> GetByIdAsync(int id);
 
-        Task<RatingDto> AddAsync(CreateRatingDto dto);
+        Task<RatingDto> AddAsync(CreateRatingDto dto, CurrentUserContextDto currentUser);
 
-        Task UpdateAsync(int id, UpdateRatingDto dto);
+        Task UpdateAsync(int id, UpdateRatingDto dto, CurrentUserContextDto currentUser);
 
-        Task<bool> DeleteAsync(int id);
+        Task<bool> DeleteAsync(int id, CurrentUserContextDto currentUser);
     }
 }

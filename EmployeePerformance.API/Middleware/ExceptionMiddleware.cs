@@ -45,6 +45,7 @@ namespace EmployeePerformance.API.Middleware
                 UserNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
                 UnauthorizedException => (StatusCodes.Status401Unauthorized, exception.Message),
                 UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, exception.Message),
+                ForbiddenException => (StatusCodes.Status403Forbidden, exception.Message),
                 EmployeeAlreadyRegisteredException => (StatusCodes.Status409Conflict, exception.Message),
                 ArgumentException => (StatusCodes.Status400BadRequest, exception.Message),
                 InvalidOperationException => (StatusCodes.Status400BadRequest, exception.Message),

@@ -599,7 +599,8 @@ public class PerformanceReviewServiceTests
         var repository = new Mock<IPerformanceReviewRepository>();
         repository.Setup(x => x.GetByEmployeeIdAsync(7)).ReturnsAsync(reviews);
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var result = await service.GetAllAsync(new CurrentUserContextDto
         {
@@ -619,7 +620,8 @@ public class PerformanceReviewServiceTests
         var repository = new Mock<IPerformanceReviewRepository>();
         repository.Setup(x => x.GetByIdForEmployeeAsync(5, 7)).ReturnsAsync((PerformanceReview?)null);
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var result = await service.GetByIdAsync(5, new CurrentUserContextDto
         {
@@ -659,7 +661,8 @@ public class PerformanceReviewServiceTests
         repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync(review);
         repository.Setup(x => x.SubmitSelfAssessmentAsync(review)).Returns(Task.CompletedTask);
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
         var nowBefore = DateTime.UtcNow;
 
         await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
@@ -688,7 +691,8 @@ public class PerformanceReviewServiceTests
         var repository = new Mock<IPerformanceReviewRepository>();
         repository.Setup(x => x.GetPerformanceReviewByIdAsync(15)).ReturnsAsync((PerformanceReview?)null);
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
         {
@@ -717,7 +721,8 @@ public class PerformanceReviewServiceTests
             ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
         });
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
         {
@@ -746,7 +751,8 @@ public class PerformanceReviewServiceTests
             ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Closed" }
         });
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
         {
@@ -776,7 +782,8 @@ public class PerformanceReviewServiceTests
             ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
         });
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
         {
@@ -805,7 +812,8 @@ public class PerformanceReviewServiceTests
             ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
         });
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.SubmitSelfAssessmentAsync(15, new SubmitSelfAssessmentDto
         {
@@ -826,7 +834,8 @@ public class PerformanceReviewServiceTests
         var repository = new Mock<IPerformanceReviewRepository>();
         repository.Setup(x => x.ExistsByEmployeeAndCycleAsync(7, 3)).ReturnsAsync(true);
 
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.AddAsync(new CreatePerformanceReviewDto
         {
@@ -857,14 +866,20 @@ public class PerformanceReviewServiceTests
         var repository = new Mock<IPerformanceReviewRepository>();
         repository.Setup(x => x.GetPerformanceReviewByIdAsync(21)).ReturnsAsync(review);
         repository.Setup(x => x.UpdateManagerReviewAsync(review)).Returns(Task.CompletedTask);
+        var ratingRepository = new Mock<IRatingRepository>();
+        ratingRepository.Setup(x => x.GetByPerformanceReviewIdAsync(21)).ReturnsAsync(new[]
+        {
+            new Rating { RatingId = 1, PerformanceReviewId = 21, Criteria = "Coding", Score = 5, CreatedAt = DateTime.UtcNow },
+            new Rating { RatingId = 2, PerformanceReviewId = 21, Criteria = "Communication", Score = 4, CreatedAt = DateTime.UtcNow },
+            new Rating { RatingId = 3, PerformanceReviewId = 21, Criteria = "Leadership", Score = 5, CreatedAt = DateTime.UtcNow }
+        });
 
-        var service = new PerformanceReviewService(repository.Object);
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         await service.ManagerReviewAsync(21, new ManagerReviewDto
         {
             Action = "Approve",
-            ManagerComments = "Excellent ownership and delivery.",
-            OverallRating = 4.5m
+            ManagerComments = "Excellent ownership and delivery."
         }, new CurrentUserContextDto
         {
             EmployeeId = 2,
@@ -872,7 +887,7 @@ public class PerformanceReviewServiceTests
         });
 
         review.ManagerComments.Should().Be("Excellent ownership and delivery.");
-        review.OverallRating.Should().Be(4.5m);
+        review.OverallRating.Should().Be(4.67m);
         review.Status.Should().Be("Approved");
         review.ApprovedDate.Should().NotBeNull();
         review.ModifiedAt.Should().NotBeNull();
@@ -880,16 +895,54 @@ public class PerformanceReviewServiceTests
     }
 
     [Fact]
+    public async Task ManagerReviewAsync_NeedsRevision_DoesNotChangeOverallRating()
+    {
+        var review = new PerformanceReview
+        {
+            PerformanceReviewId = 22,
+            ReviewCycleId = 3,
+            EmployeeId = 7,
+            ManagerId = 2,
+            Status = "Submitted",
+            OverallRating = 3.5m,
+            ReviewCycle = new ReviewCycle { ReviewCycleId = 3, Status = "Active" }
+        };
+
+        var repository = new Mock<IPerformanceReviewRepository>();
+        repository.Setup(x => x.GetPerformanceReviewByIdAsync(22)).ReturnsAsync(review);
+        repository.Setup(x => x.UpdateManagerReviewAsync(review)).Returns(Task.CompletedTask);
+        var ratingRepository = new Mock<IRatingRepository>();
+
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
+
+        await service.ManagerReviewAsync(22, new ManagerReviewDto
+        {
+            Action = "NeedsRevision",
+            ManagerComments = "Please improve documentation."
+        }, new CurrentUserContextDto
+        {
+            EmployeeId = 2,
+            Role = "Manager"
+        });
+
+        review.ManagerComments.Should().Be("Please improve documentation.");
+        review.OverallRating.Should().Be(3.5m);
+        review.Status.Should().Be("NeedsRevision");
+        review.ApprovedDate.Should().BeNull();
+        repository.Verify(x => x.UpdateManagerReviewAsync(review), Times.Once);
+    }
+
+    [Fact]
     public async Task ManagerReviewAsync_RejectsInvalidActionValue()
     {
         var repository = new Mock<IPerformanceReviewRepository>();
-        var service = new PerformanceReviewService(repository.Object);
+        var ratingRepository = new Mock<IRatingRepository>();
+        var service = new PerformanceReviewService(repository.Object, ratingRepository.Object);
 
         var act = async () => await service.ManagerReviewAsync(21, new ManagerReviewDto
         {
             Action = "Reject",
-            ManagerComments = "No",
-            OverallRating = 4.5m
+            ManagerComments = "No"
         }, new CurrentUserContextDto
         {
             EmployeeId = 2,

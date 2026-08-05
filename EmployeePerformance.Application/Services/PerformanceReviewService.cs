@@ -8,10 +8,12 @@ namespace EmployeePerformance.Application.Services
     public class PerformanceReviewService : IPerformanceReviewService
     {
         private readonly IPerformanceReviewRepository _performanceReviewRepository;
+        private readonly IRatingRepository _ratingRepository;
 
-        public PerformanceReviewService(IPerformanceReviewRepository performanceReviewRepository)
+        public PerformanceReviewService(IPerformanceReviewRepository performanceReviewRepository, IRatingRepository ratingRepository)
         {
             _performanceReviewRepository = performanceReviewRepository;
+            _ratingRepository = ratingRepository;
         }
 
         public async Task<IEnumerable<PerformanceReviewDto>> GetAllAsync(CurrentUserContextDto currentUser)
@@ -124,22 +126,25 @@ namespace EmployeePerformance.Application.Services
                 throw new ArgumentException("Performance review cannot be reviewed in the current status.");
             }
 
+            ValidateManagerComments(dto.ManagerComments);
+
+            performanceReview.ManagerComments = dto.ManagerComments!.Trim();
+
             if (string.Equals(dto.Action, "Approve", StringComparison.Ordinal))
             {
-                ValidateManagerComments(dto.ManagerComments);
-                ValidateOverallRating(dto.OverallRating);
+                var ratings = (await _ratingRepository.GetByPerformanceReviewIdAsync(reviewId)).ToList();
+                if (ratings.Count == 0)
+                {
+                    throw new ArgumentException("No ratings found for this performance review.");
+                }
 
-                performanceReview.ManagerComments = dto.ManagerComments!.Trim();
-                performanceReview.OverallRating = dto.OverallRating;
+                performanceReview.OverallRating = (decimal)Math.Round(ratings.Average(rating => rating.Score), 2, MidpointRounding.AwayFromZero);
                 performanceReview.Status = "Approved";
                 performanceReview.ApprovedDate = DateTime.UtcNow;
                 performanceReview.ModifiedAt = DateTime.UtcNow;
             }
             else
             {
-                ValidateManagerComments(dto.ManagerComments);
-
-                performanceReview.ManagerComments = dto.ManagerComments!.Trim();
                 performanceReview.Status = "NeedsRevision";
                 performanceReview.ModifiedAt = DateTime.UtcNow;
             }
@@ -217,19 +222,6 @@ namespace EmployeePerformance.Application.Services
             if (managerComments.Length > 2000)
             {
                 throw new ArgumentException("Manager comments must not exceed 2000 characters.");
-            }
-        }
-
-        private static void ValidateOverallRating(decimal? overallRating)
-        {
-            if (!overallRating.HasValue)
-            {
-                throw new ArgumentException("Overall rating is required for approval.");
-            }
-
-            if (overallRating < 1.0m || overallRating > 5.0m)
-            {
-                throw new ArgumentException("Overall rating must be between 1.0 and 5.0.");
             }
         }
 

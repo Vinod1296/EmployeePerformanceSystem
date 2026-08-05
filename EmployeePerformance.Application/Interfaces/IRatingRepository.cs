@@ -1,9 +1,4 @@
-﻿using EmployeePerformance.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using EmployeePerformance.Domain.Entities;
 
 namespace EmployeePerformance.Application.Interfaces
 {
@@ -12,6 +7,10 @@ namespace EmployeePerformance.Application.Interfaces
         Task<IEnumerable<Rating>> GetAllAsync();
 
         Task<Rating?> GetByIdAsync(int id);
+
+        Task<IEnumerable<Rating>> GetByPerformanceReviewIdAsync(int performanceReviewId);
+
+        Task<bool> ExistsByPerformanceReviewIdAsync(int performanceReviewId);
 
         Task AddAsync(Rating rating);
 

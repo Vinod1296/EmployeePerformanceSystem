@@ -30,6 +30,19 @@ namespace EmployeePerformance.Infrastructure.Repositories
 
         }
 
+        public async Task<IEnumerable<Rating>> GetByPerformanceReviewIdAsync(int performanceReviewId)
+        {
+            return await _context.Ratings
+                .AsNoTracking()
+                .Where(rating => rating.PerformanceReviewId == performanceReviewId)
+                .ToListAsync();
+        }
+
+        public async Task<bool> ExistsByPerformanceReviewIdAsync(int performanceReviewId)
+        {
+            return await _context.Ratings.AnyAsync(rating => rating.PerformanceReviewId == performanceReviewId);
+        }
+
         public async Task AddAsync(Rating rating)
         {
             await _context.Ratings.AddAsync(rating);
