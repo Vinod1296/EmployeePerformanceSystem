@@ -69,12 +69,6 @@ namespace EmployeePerformance.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(PerformanceReview performanceReview)
-        {
-            _context.PerformanceReviews.Update(performanceReview);
-            await _context.SaveChangesAsync();
-        }
-
         public async Task SubmitSelfAssessmentAsync(PerformanceReview performanceReview)
         {
             _context.Entry(performanceReview).Property(x => x.SelfAssessment).IsModified = true;

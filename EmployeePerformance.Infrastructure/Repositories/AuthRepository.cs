@@ -45,6 +45,11 @@ namespace EmployeePerformance.Infrastructure.Repositories
             return await _context.Employees.AsNoTracking().AnyAsync(employee => employee.EmployeeId == employeeId);
         }
 
+        public async Task<Employee?> GetEmployeeByIdAsync(int employeeId)
+        {
+            return await _context.Employees.AsNoTracking().FirstOrDefaultAsync(employee => employee.EmployeeId == employeeId);
+        }
+
         public async Task<bool> EmployeeAlreadyRegisteredAsync(int employeeId)
         {
             return await _context.Users.AsNoTracking().AnyAsync(user => user.EmployeeId == employeeId);

@@ -28,6 +28,12 @@ public class AuthServiceTests
 
         authRepository.Setup(x => x.UsernameExistsAsync("rahul"))
             .ReturnsAsync(false);
+        authRepository.Setup(x => x.GetEmployeeByIdAsync(10))
+            .ReturnsAsync(new Employee
+            {
+                EmployeeId = 10,
+                IsActive = true
+            });
         authRepository.Setup(x => x.EmployeeExistsAsync(10))
             .ReturnsAsync(true);
         authRepository.Setup(x => x.EmployeeAlreadyRegisteredAsync(10))
@@ -54,6 +60,144 @@ public class AuthServiceTests
         createdUser.Should().NotBeNull();
         createdUser!.Role.Should().Be("Employee");
         response.Role.Should().Be("Employee");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_Throws_WhenEmployeeNotFound()
+    {
+        var authRepository = new Mock<IAuthRepository>();
+        var tokenGenerator = new Mock<IJwtTokenGenerator>();
+        var currentUserContext = new Mock<ICurrentUserContext>();
+        var jwtSettings = Options.Create(new Application.Configuration.JwtSettings
+        {
+            Issuer = "issuer",
+            Audience = "audience",
+            Key = "super-secret-test-key-super-secret-test-key",
+            ExpireMinutes = 60
+        });
+
+        authRepository.Setup(x => x.GetEmployeeByIdAsync(10))
+            .ReturnsAsync((Employee?)null);
+
+        var service = new AuthService(authRepository.Object, tokenGenerator.Object, jwtSettings, currentUserContext.Object);
+
+        var act = async () => await service.RegisterAsync(new RegisterRequestDto
+        {
+            EmployeeId = 10,
+            Username = "rahul",
+            Password = "rahul@1234"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Employee not found.");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_Throws_WhenEmployeeIsInactive()
+    {
+        var authRepository = new Mock<IAuthRepository>();
+        var tokenGenerator = new Mock<IJwtTokenGenerator>();
+        var currentUserContext = new Mock<ICurrentUserContext>();
+        var jwtSettings = Options.Create(new Application.Configuration.JwtSettings
+        {
+            Issuer = "issuer",
+            Audience = "audience",
+            Key = "super-secret-test-key-super-secret-test-key",
+            ExpireMinutes = 60
+        });
+
+        authRepository.Setup(x => x.GetEmployeeByIdAsync(10))
+            .ReturnsAsync(new Employee
+            {
+                EmployeeId = 10,
+                IsActive = false
+            });
+
+        var service = new AuthService(authRepository.Object, tokenGenerator.Object, jwtSettings, currentUserContext.Object);
+
+        var act = async () => await service.RegisterAsync(new RegisterRequestDto
+        {
+            EmployeeId = 10,
+            Username = "rahul",
+            Password = "rahul@1234"
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Employee is inactive.");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_Throws_WhenEmployeeAlreadyHasUserAccount()
+    {
+        var authRepository = new Mock<IAuthRepository>();
+        var tokenGenerator = new Mock<IJwtTokenGenerator>();
+        var currentUserContext = new Mock<ICurrentUserContext>();
+        var jwtSettings = Options.Create(new Application.Configuration.JwtSettings
+        {
+            Issuer = "issuer",
+            Audience = "audience",
+            Key = "super-secret-test-key-super-secret-test-key",
+            ExpireMinutes = 60
+        });
+
+        authRepository.Setup(x => x.GetEmployeeByIdAsync(10))
+            .ReturnsAsync(new Employee
+            {
+                EmployeeId = 10,
+                IsActive = true
+            });
+        authRepository.Setup(x => x.EmployeeAlreadyRegisteredAsync(10))
+            .ReturnsAsync(true);
+
+        var service = new AuthService(authRepository.Object, tokenGenerator.Object, jwtSettings, currentUserContext.Object);
+
+        var act = async () => await service.RegisterAsync(new RegisterRequestDto
+        {
+            EmployeeId = 10,
+            Username = "rahul",
+            Password = "rahul@1234"
+        });
+
+        await act.Should().ThrowAsync<Application.Exceptions.EmployeeAlreadyRegisteredException>()
+            .WithMessage("A user account already exists for this employee.");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_Throws_WhenUsernameAlreadyExists()
+    {
+        var authRepository = new Mock<IAuthRepository>();
+        var tokenGenerator = new Mock<IJwtTokenGenerator>();
+        var currentUserContext = new Mock<ICurrentUserContext>();
+        var jwtSettings = Options.Create(new Application.Configuration.JwtSettings
+        {
+            Issuer = "issuer",
+            Audience = "audience",
+            Key = "super-secret-test-key-super-secret-test-key",
+            ExpireMinutes = 60
+        });
+
+        authRepository.Setup(x => x.GetEmployeeByIdAsync(10))
+            .ReturnsAsync(new Employee
+            {
+                EmployeeId = 10,
+                IsActive = true
+            });
+        authRepository.Setup(x => x.EmployeeAlreadyRegisteredAsync(10))
+            .ReturnsAsync(false);
+        authRepository.Setup(x => x.UsernameExistsAsync("rahul"))
+            .ReturnsAsync(true);
+
+        var service = new AuthService(authRepository.Object, tokenGenerator.Object, jwtSettings, currentUserContext.Object);
+
+        var act = async () => await service.RegisterAsync(new RegisterRequestDto
+        {
+            EmployeeId = 10,
+            Username = "rahul",
+            Password = "rahul@1234"
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Username already exists.");
     }
 
     [Fact]

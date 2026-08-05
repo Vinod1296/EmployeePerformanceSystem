@@ -60,15 +60,6 @@ namespace EmployeePerformance.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = createdPerformanceReview.performanceReviewId }, "Performance Review Created Successfully.");
         }
 
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Manager")]
-        public async Task<IActionResult> Update(int id, UpdatePerformanceReviewDto dto)
-        {
-            await _performanceReviewService.UpdateAsync(id, dto);
-
-            return Ok("Performance Review Updated Successfully.");
-        }
-
         [HttpPut("{reviewId}/self-assessment")]
         [Authorize(Roles = "Employee")]
         public async Task<IActionResult> SubmitSelfAssessment(int reviewId, SubmitSelfAssessmentDto dto)

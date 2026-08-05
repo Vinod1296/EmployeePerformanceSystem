@@ -11,8 +11,6 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task<PerformanceReviewDto> AddAsync(CreatePerformanceReviewDto dto);
 
-        Task UpdateAsync(int id, UpdatePerformanceReviewDto dto);
-
         Task SubmitSelfAssessmentAsync(int reviewId, SubmitSelfAssessmentDto dto, CurrentUserContextDto currentUser);
 
         Task ManagerReviewAsync(int reviewId, ManagerReviewDto dto, CurrentUserContextDto currentUser);

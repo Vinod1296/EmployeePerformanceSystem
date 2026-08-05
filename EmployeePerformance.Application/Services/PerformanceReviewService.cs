@@ -49,18 +49,6 @@ namespace EmployeePerformance.Application.Services
             return MapToDto(performanceReview);
         }
 
-        public async Task UpdateAsync(int id, UpdatePerformanceReviewDto dto)
-        {
-            var performanceReview = await _performanceReviewRepository.GetByIdAsync(id);
-
-            if (performanceReview == null)
-                throw new KeyNotFoundException("Performance Review not found.");
-
-            UpdateEntity(performanceReview, dto);
-
-            await _performanceReviewRepository.UpdateAsync(performanceReview);
-        }
-
         public async Task SubmitSelfAssessmentAsync(int reviewId, SubmitSelfAssessmentDto dto, CurrentUserContextDto currentUser)
         {
             if (!IsEmployee(currentUser))
@@ -199,15 +187,6 @@ namespace EmployeePerformance.Application.Services
                 CreatedAt = DateTime.UtcNow,
                 ModifiedAt = null
             };
-        }
-
-        private void UpdateEntity(PerformanceReview performanceReview, UpdatePerformanceReviewDto dto)
-        {
-            performanceReview.SelfAssessment = dto.SelfAssessment;
-            performanceReview.ManagerComments = dto.ManagerComments;
-            performanceReview.OverallRating = dto.OverallRating;
-            performanceReview.Status = dto.Status;
-            performanceReview.ModifiedAt = DateTime.UtcNow;
         }
 
         private static void ValidateSelfAssessment(SubmitSelfAssessmentDto dto)

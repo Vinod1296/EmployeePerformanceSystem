@@ -23,8 +23,6 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task AddAsync(PerformanceReview performanceReview);
 
-        Task UpdateAsync(PerformanceReview performanceReview);
-
         Task SubmitSelfAssessmentAsync(PerformanceReview performanceReview);
 
         Task UpdateManagerReviewAsync(PerformanceReview performanceReview);

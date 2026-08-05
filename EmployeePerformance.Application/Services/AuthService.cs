@@ -76,19 +76,25 @@ namespace EmployeePerformance.Application.Services
         /// <inheritdoc />
         public async Task<RegisterResponseDto> RegisterAsync(RegisterRequestDto request)
         {
-            if (await _authRepository.UsernameExistsAsync(request.Username))
+            var employee = await _authRepository.GetEmployeeByIdAsync(request.EmployeeId);
+            if (employee is null)
             {
-                throw new InvalidOperationException("Username already exists.");
+                throw new ArgumentException("Employee not found.");
             }
 
-            if (!await _authRepository.EmployeeExistsAsync(request.EmployeeId))
+            if (!employee.IsActive)
             {
-                throw new KeyNotFoundException("Employee not found.");
+                throw new InvalidOperationException("Employee is inactive.");
             }
 
             if (await _authRepository.EmployeeAlreadyRegisteredAsync(request.EmployeeId))
             {
-                throw new InvalidOperationException("Employee already has a registered account.");
+                throw new EmployeeAlreadyRegisteredException();
+            }
+
+            if (await _authRepository.UsernameExistsAsync(request.Username))
+            {
+                throw new InvalidOperationException("Username already exists.");
             }
 
             var user = new User

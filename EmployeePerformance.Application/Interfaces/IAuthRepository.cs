@@ -17,6 +17,8 @@ namespace EmployeePerformance.Application.Interfaces
 
         Task<bool> EmployeeExistsAsync(int employeeId);
 
+        Task<Employee?> GetEmployeeByIdAsync(int employeeId);
+
         Task<bool> EmployeeAlreadyRegisteredAsync(int employeeId);
 
         Task<User> CreateUserAsync(User user);
