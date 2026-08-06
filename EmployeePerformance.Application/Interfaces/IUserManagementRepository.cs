@@ -1,12 +1,12 @@
-using EmployeePerformance.Domain.Entities;
 using EmployeePerformance.Application.DTOs.Common;
 using EmployeePerformance.Application.DTOs.UserManagement;
+using EmployeePerformance.Domain.Entities;
 
 namespace EmployeePerformance.Application.Interfaces
 {
     public interface IUserManagementRepository
     {
-        Task<PagedResultDto<UserListDto>> GetUsersAsync(UserQueryParametersDto parameters);
+        Task<PagedResponse<UserListDto>> GetUsersAsync(UserQueryParametersDto parameters);
 
         Task<UserDetailsDto?> GetUserByIdAsync(int userId);
 

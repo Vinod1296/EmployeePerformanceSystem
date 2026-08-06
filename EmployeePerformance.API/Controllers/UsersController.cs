@@ -1,3 +1,4 @@
+using EmployeePerformance.Application.DTOs.Common;
 using EmployeePerformance.Application.DTOs.UserManagement;
 using EmployeePerformance.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -19,11 +20,11 @@ namespace EmployeePerformance.API.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(EmployeePerformance.Application.DTOs.Common.PagedResultDto<UserListDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedResponse<UserListDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(string), StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<EmployeePerformance.Application.DTOs.Common.PagedResultDto<UserListDto>>> GetUsers([FromQuery] UserQueryParametersDto queryParameters)
+        public async Task<ActionResult<PagedResponse<UserListDto>>> GetUsers([FromQuery] UserQueryParametersDto queryParameters)
         {
             if (!ModelState.IsValid)
             {

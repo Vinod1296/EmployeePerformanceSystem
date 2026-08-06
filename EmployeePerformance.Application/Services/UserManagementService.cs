@@ -22,7 +22,7 @@ namespace EmployeePerformance.Application.Services
             _userManagementRepository = userManagementRepository;
         }
 
-        public async Task<PagedResultDto<UserListDto>> GetUsersAsync(UserQueryParametersDto parameters)
+        public async Task<PagedResponse<UserListDto>> GetUsersAsync(UserQueryParametersDto parameters)
         {
             ValidateQueryParameters(parameters);
             return await _userManagementRepository.GetUsersAsync(parameters);

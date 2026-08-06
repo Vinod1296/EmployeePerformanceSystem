@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using EmployeePerformance.Application.Interfaces;
+using EmployeePerformance.Application.DTOs.Common;
 using EmployeePerformance.Application.DTOs.Employee;
 using EmployeePerformance.Application.Exceptions;
+using EmployeePerformance.Application.Interfaces;
 using EmployeePerformance.Domain.Entities;
+
 namespace EmployeePerformance.Application.Services
 {
-    public  class EmployeeService : IEmployeeService
+    public class EmployeeService : IEmployeeService
     {
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IUserManagementRepository _userManagementRepository;
@@ -22,16 +19,17 @@ namespace EmployeePerformance.Application.Services
 
         public async Task<EmployeeDto> AddEmployeeAsync(CreateEmployeeDto employeeDto)
         {
-            var employee = new Employee();
-
-            employee.EmployeeCode = employeeDto.EmployeeCode;
-            employee.FirstName = employeeDto.FristName;
-            employee.LastName = employeeDto.LastName;
-            employee.Email = employeeDto.Email;
-            employee.Department = employeeDto.Department;
-            employee.Designation = employeeDto.Designation;
-            employee.ManagerId = employeeDto.ManagerId;
-            employee.HireDate = employeeDto.HireDate;
+            var employee = new Employee
+            {
+                EmployeeCode = employeeDto.EmployeeCode,
+                FirstName = employeeDto.FristName,
+                LastName = employeeDto.LastName,
+                Email = employeeDto.Email,
+                Department = employeeDto.Department,
+                Designation = employeeDto.Designation,
+                ManagerId = employeeDto.ManagerId,
+                HireDate = employeeDto.HireDate
+            };
 
             await ValidateManagerAsync(employee.ManagerId, null);
 
@@ -41,108 +39,41 @@ namespace EmployeePerformance.Application.Services
 
             await _employeeRepository.AddAsync(employee);
 
-            return new EmployeeDto
-            {
-                EmployeeId = employee.EmployeeId,
-                EmployeeCode = employee.EmployeeCode,
-                FristName = employee.FirstName,
-                LastName = employee.LastName,
-                Email = employee.Email,
-                Department = employee.Department ?? string.Empty,
-                Designation = employee.Designation ?? string.Empty,
-                ManagerId = employee.ManagerId,
-                HireDate = employee.HireDate.HasValue
-                    ? employee.HireDate.Value.ToDateTime(TimeOnly.MinValue)
-                    : DateTime.MinValue,
-                IsActive = employee.IsActive
-            };
+            return MapToDto(employee);
         }
-
-        //public async Task DeleteEmployeeAsync(int id)
-        //{
-        //    var employee = await _employeeRepository.GetByIdAsync(id);
-
-        //    if (employee == null)
-        //    {
-        //        return;
-        //    }
-
-        //    await _employeeRepository.DeleteAsync(employee);
-        //}
-
 
         public async Task<bool> DeleteEmployeeAsync(int id)
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
             if (employee == null)
             {
-                return false; // Employee not found
+                return false;
             }
+
             await _employeeRepository.DeleteAsync(employee);
-            return true; // Employee deleted successfully
+            return true;
         }
 
         public async Task<EmployeeDto?> GetEmployeeByIdAsync(int id)
         {
-
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
-            {
-                return null;
-            }
-            var employeeDto = new EmployeeDto
-            {
-                EmployeeId = employee.EmployeeId,
-                EmployeeCode = employee.EmployeeCode,
-                FristName = employee.FirstName,
-                LastName = employee.LastName,
-                Email = employee.Email,
-                Department = employee.Department ?? string.Empty,
-                Designation = employee.Designation ?? string.Empty,
-                ManagerId = employee.ManagerId,
-                HireDate = employee.HireDate.HasValue ? new DateTime(employee.HireDate.Value.Year, employee.HireDate.Value.Month, employee.HireDate.Value.Day) : DateTime.MinValue,
-                IsActive = employee.IsActive
-            };
-
-            return employeeDto;
+            return employee is null ? null : MapToDto(employee);
         }
 
-        public  async Task<IEnumerable<EmployeeDto>> GetAllEmployeesAsync()
+        public async Task<IEnumerable<EmployeeDto>> GetAllEmployeesAsync()
         {
-           var employees = await _employeeRepository.GetAllAsync();
-            
-            var employeeDtos = new List<EmployeeDto>();
+            var employees = await _employeeRepository.GetAllAsync();
+            return employees.Select(MapToDto).ToList();
+        }
 
- 
-                foreach (var employee in employees)
-                {
-                    var employeeDto = new EmployeeDto
-                    {
-                        EmployeeId = employee.EmployeeId,
-                        EmployeeCode = employee.EmployeeCode,
-                        FristName = employee.FirstName,
-                        LastName = employee.LastName,
-                        Email = employee.Email,
-                        Department = employee.Department ?? string.Empty,
-                        Designation = employee.Designation ?? string.Empty,
-                        ManagerId = employee.ManagerId,
-                        HireDate = employee.HireDate.HasValue ? new DateTime(employee.HireDate.Value.Year, employee.HireDate.Value.Month, employee.HireDate.Value.Day) : DateTime.MinValue,
-                        IsActive = employee.IsActive
-                    };
-                employeeDtos.Add(employeeDto);
-                }
-                return employeeDtos;
-            }
-
-        public async  Task UpdateEmployeeAsync(int id, UpdateEmployeeDto employeeDto)
+        public async Task UpdateEmployeeAsync(int id, UpdateEmployeeDto employeeDto)
         {
-            
             var employee = await _employeeRepository.GetByIdAsync(id);
-
             if (employee == null)
             {
                 return;
             }
+
             await ValidateManagerAsync(employeeDto.ManagerId, id);
             employee.FirstName = employeeDto.FristName;
             employee.LastName = employeeDto.LastName;
@@ -154,6 +85,42 @@ namespace EmployeePerformance.Application.Services
             employee.ModifiedAt = DateTime.UtcNow;
             employee.IsActive = employeeDto.IsActive;
             await _employeeRepository.UpdateAsync(employee);
+        }
+
+        public async Task<PagedResponse<EmployeeDto>> SearchEmployeesAsync(EmployeeSearchDto searchDto)
+        {
+            searchDto.PageNumber = searchDto.PageNumber <= 0 ? 1 : searchDto.PageNumber;
+            searchDto.PageSize = searchDto.PageSize <= 0 ? 10 : searchDto.PageSize;
+
+            var pagedEmployees = await _employeeRepository.SearchEmployeesAsync(searchDto);
+
+            return new PagedResponse<EmployeeDto>
+            {
+                PageNumber = pagedEmployees.PageNumber,
+                PageSize = pagedEmployees.PageSize,
+                TotalRecords = pagedEmployees.TotalRecords,
+                TotalPages = pagedEmployees.TotalPages,
+                Data = pagedEmployees.Data.Select(MapToDto).ToList()
+            };
+        }
+
+        private static EmployeeDto MapToDto(Employee employee)
+        {
+            return new EmployeeDto
+            {
+                EmployeeId = employee.EmployeeId,
+                EmployeeCode = employee.EmployeeCode,
+                FristName = employee.FirstName,
+                LastName = employee.LastName,
+                Email = employee.Email,
+                Department = employee.Department ?? string.Empty,
+                Designation = employee.Designation ?? string.Empty,
+                ManagerId = employee.ManagerId,
+                HireDate = employee.HireDate.HasValue
+                    ? new DateTime(employee.HireDate.Value.Year, employee.HireDate.Value.Month, employee.HireDate.Value.Day)
+                    : DateTime.MinValue,
+                IsActive = employee.IsActive
+            };
         }
 
         private async Task ValidateManagerAsync(int? managerId, int? employeeId)
@@ -195,27 +162,5 @@ namespace EmployeePerformance.Application.Services
                 throw new InvalidOperationException("Selected employee is not a Manager.");
             }
         }
-
-
-        public async Task<List<EmployeeDto>> SearchEmployeesAsync(EmployeeSearchDto searchDto)
-        {
-            var employees = await _employeeRepository.SearchEmployeesAsync(searchDto);
-
-            return employees.Select(e => new EmployeeDto
-            {
-                EmployeeId = e.EmployeeId,
-                EmployeeCode = e.EmployeeCode,
-                FristName = e.FirstName,
-                LastName = e.LastName,
-                Email = e.Email,
-                Department = e.Department ?? string.Empty,
-                Designation = e.Designation ?? string.Empty,
-                ManagerId = e.ManagerId,
-                HireDate = e.HireDate.HasValue ? new DateTime(e.HireDate.Value.Year, e.HireDate.Value.Month, e.HireDate.Value.Day) : DateTime.MinValue,
-                IsActive = e.IsActive
-            }).ToList();
-
-        }
-           
     }
 }

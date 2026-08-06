@@ -18,7 +18,7 @@ namespace EmployeePerformance.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<PagedResultDto<UserListDto>> GetUsersAsync(UserQueryParametersDto parameters)
+        public async Task<PagedResponse<UserListDto>> GetUsersAsync(UserQueryParametersDto parameters)
         {
             var query = BuildBaseUserQuery();
 
@@ -61,7 +61,7 @@ namespace EmployeePerformance.Infrastructure.Repositories
                 })
                 .ToListAsync();
 
-            return new PagedResultDto<UserListDto>
+            return new PagedResponse<UserListDto>
             {
                 PageNumber = parameters.PageNumber,
                 PageSize = parameters.PageSize,
